@@ -12,3 +12,4 @@ jobs:
           curl -H "Content-Type: application/json" \
           -d '{"msg_type": "text", "content": {"text": "✅ GitHub 成功联通飞书！"}}' \
           $WH
+
