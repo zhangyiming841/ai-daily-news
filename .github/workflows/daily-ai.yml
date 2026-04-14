@@ -2,7 +2,7 @@ name: Daily AI Trending
 
 on:
   schedule:
-    - cron: '0 1 * * *'
+    - cron: '0 23 * * *'  # 北京时间早上7点
   workflow_dispatch:
 
 jobs:
@@ -16,12 +16,11 @@ jobs:
           pip install requests beautifulsoup4 deep-translator -q
           
           python3 << 'EOF'
-          import requests, os
+          import requests, os, json
           from datetime import datetime
           from bs4 import BeautifulSoup
           from deep_translator import GoogleTranslator
           
-          # 抓取 GitHub Trending
           headers = {"User-Agent": "Mozilla/5.0"}
           res = requests.get("https://github.com/trending?since=daily", headers=headers)
           soup = BeautifulSoup(res.text, "html.parser")
@@ -36,7 +35,7 @@ jobs:
               if name:
                   repo_name = name.get_text(strip=True).replace("\n","").replace(" ","")
                   repo_desc = desc.get_text(strip=True) if desc else "暂无描述"
-                  repo_stars = stars.get_text(strip=True) if stars else ""
+                  repo_stars = stars.get_text(strip=True) if stars else "N/A"
                   try:
                       repo_desc_cn = translator.translate(repo_desc)
                   except:
@@ -44,15 +43,44 @@ jobs:
                   repos.append((repo_name, repo_desc_cn, repo_stars))
           
           date = datetime.now().strftime("%Y-%m-%d")
-          lines = [f"🔥 GitHub Trending {date}\n"]
+          
+          # 构建飞书卡片
+          elements = [
+              {
+                  "tag": "div",
+                  "text": {
+                      "tag": "lark_md",
+                      "content": f"📅 {date} | 每日自动推送"
+                  }
+              },
+              {"tag": "hr"}
+          ]
           
           for i, (name, desc, stars) in enumerate(repos):
-              lines.append(f"{i+1}. {name}  ⭐{stars}\n   {desc}\n   https://github.com/{name}\n")
+              elements.append({
+                  "tag": "div",
+                  "text": {
+                      "tag": "lark_md",
+                      "content": f"**{i+1}. [{name}](https://github.com/{name})**\n{desc}\n⭐ {stars}"
+                  }
+              })
+              elements.append({"tag": "hr"})
           
-          msg = "\n".join(lines)
+          card = {
+              "msg_type": "interactive",
+              "card": {
+                  "header": {
+                      "title": {
+                          "tag": "plain_text",
+                          "content": "🔥 GitHub Trending 今日热榜"
+                      },
+                      "template": "red"
+                  },
+                  "elements": elements
+              }
+          }
           
           webhook = os.environ["WH"]
-          payload = {"msg_type": "text", "content": {"text": msg}}
-          r = requests.post(webhook, json=payload)
+          r = requests.post(webhook, json=card)
           print(r.text)
           EOF
