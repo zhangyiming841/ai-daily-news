@@ -13,20 +13,23 @@ jobs:
         env:
           WH: ${{ secrets.FEISHU_WEBHOOK }}
         run: |
-          pip install requests beautifulsoup4 -q
+          pip install requests beautifulsoup4 deep-translator -q
           
           python3 << 'EOF'
-          import requests, json, os
+          import requests, os
           from datetime import datetime
           from bs4 import BeautifulSoup
+          from deep_translator import GoogleTranslator
           
           # 抓取 GitHub Trending
           headers = {"User-Agent": "Mozilla/5.0"}
           res = requests.get("https://github.com/trending?since=daily", headers=headers)
           soup = BeautifulSoup(res.text, "html.parser")
           
+          translator = GoogleTranslator(source='en', target='zh-CN')
+          
           repos = []
-          for item in soup.select("article.Box-row")[:15]:
+          for item in soup.select("article.Box-row")[:10]:
               name = item.select_one("h2 a")
               desc = item.select_one("p")
               stars = item.select_one("span.d-inline-block.float-sm-right")
@@ -34,10 +37,19 @@ jobs:
                   repo_name = name.get_text(strip=True).replace("\n","").replace(" ","")
                   repo_desc = desc.get_text(strip=True) if desc else "暂无描述"
                   repo_stars = stars.get_text(strip=True) if stars else ""
-                  repos.append(f"{repo_name} | {repo_stars}\n{repo_desc}")
+                  try:
+                      repo_desc_cn = translator.translate(repo_desc)
+                  except:
+                      repo_desc_cn = repo_desc
+                  repos.append((repo_name, repo_desc_cn, repo_stars))
           
           date = datetime.now().strftime("%Y-%m-%d")
-          msg = f"GitHub Trending {date}\n\n" + "\n\n".join([f"{i+1}. {r}" for i,r in enumerate(repos)])
+          lines = [f"🔥 GitHub Trending {date}\n"]
+          
+          for i, (name, desc, stars) in enumerate(repos):
+              lines.append(f"{i+1}. {name}  ⭐{stars}\n   {desc}\n   https://github.com/{name}\n")
+          
+          msg = "\n".join(lines)
           
           webhook = os.environ["WH"]
           payload = {"msg_type": "text", "content": {"text": msg}}
