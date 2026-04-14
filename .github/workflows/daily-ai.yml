@@ -1,15 +1,37 @@
-name: Test Feishu
+name: Daily AI Trending
+
 on:
+  schedule:
+    - cron: '0 1 * * *'  # 每天北京时间早上9点
   workflow_dispatch:
+
 jobs:
-  run-it:
+  send-trending:
     runs-on: ubuntu-latest
     steps:
-      - name: Send Test to Feishu
+      - name: Fetch GitHub AI Trending and Send to Feishu
         env:
           WH: ${{ secrets.FEISHU_WEBHOOK }}
         run: |
-          curl -H "Content-Type: application/json" \
-          -d '{"msg_type": "text", "content": {"text": "✅ GitHub 成功联通飞书！"}}' \
-          $WH
-
+          # 抓取 GitHub Trending 页面
+          HTML=$(curl -s "https://github.com/trending?since=daily&spoken_language_code=en" \
+            -H "User-Agent: Mozilla/5.0")
+          
+          # 提取项目信息
+          REPOS=$(echo "$HTML" | grep -oP '(?<=href="/)[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+(?=" )' | \
+            grep -iv "trending\|explore\|login\|signup" | head -20)
+          
+          # 构建消息
+          DATE=$(TZ='Asia/Shanghai' date '+%Y-%m-%d')
+          MSG="🔥 GitHub AI Trending - $DATE\n\n"
+          
+          COUNT=1
+          while IFS= read -r repo; do
+            MSG="${MSG}${COUNT}. https://github.com/${repo}\n"
+            COUNT=$((COUNT + 1))
+          done <<< "$REPOS"
+          
+          # 发送到飞书
+          curl -s -X POST "$WH" \
+            -H "Content-Type: application/json" \
+            -d "{\"msg_type\": \"text\", \"content\": {\"text\": \"$(echo -e $MSG)\"}}"
