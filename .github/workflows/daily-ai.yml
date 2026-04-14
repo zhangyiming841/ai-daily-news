@@ -1,35 +1,36 @@
-```yaml                                                                                                                                             
-name: Daily GitHub AI News                                                                                                                          
-on:                                                                                                                                                 
-  schedule:                                                                                                                                         
-    - cron: '0 1 * * *'                                                                                                                             
-  workflow_dispatch:                                                                                                                                
-jobs:                                                                                                                                               
-  run-it:                                                                                                                                           
-    runs-on: ubuntu-latest                                                                                                                          
-    steps:                                                                                                                                          
-      - uses: actions/checkout@v3                                                                                                                   
-      - name: Install                                                                                                                               
-        run: pip install requests beautifulsoup4                                                                                                    
-      - name: Push to Feishu                                                                                                                        
-        env:                                                                                                                                        
-          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}                                                                                             
-        run: |                                                                                                                                      
-          python3 -c "                                                                                                                              
-import requests, os, sys                                                                                                                            
-from bs4 import BeautifulSoup                                                                                                                       
-try:                                                                                                                                                
-    url = 'https://github.com/trending/ai'                                                                                                          
-    res = requests.get(url)                                                                                                                         
-    soup = BeautifulSoup(res.text, 'html.parser')                                                                                                   
-    repos = soup.select('article.Box-row')[:5]                                                                                                      
-    msg = '🤖 【GitHub AI Trending】\n\n'                                                                                                           
-    for repo in repos:                                                                                                                              
-        name = repo.select_one('h2 > a').text.strip().replace('\n', '').replace(' ', '')                                                            
-        desc = repo.select_one('p').text.strip() if repo.select_one('p') else 'No desc'                                                             
-        msg += f'• {name}\n  {desc}\n\n'                                                                                                            
-    requests.post(os.environ['FEISHU_WEBHOOK'], json={'msg_type': 'text', 'content': {'text': msg}})                                                
-except Exception as e:                                                                                                                              
-    print(e)                                                                                                                                        
-"                                                                                                                                                   
-``` 
+
+```yaml
+name: Daily GitHub AI News
+on:
+  schedule:
+    - cron: '0 1 * * *'
+  workflow_dispatch:
+jobs:
+  run-it:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install
+        run: pip install requests beautifulsoup4
+      - name: Push to Feishu
+        env:
+          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
+        run: |
+          python3 -c "
+import requests, os
+from bs4 import BeautifulSoup
+try:
+    url = 'https://github.com/trending/ai'
+    res = requests.get(url)
+    soup = BeautifulSoup(res.text, 'html.parser')
+    repos = soup.select('article.Box-row')[:5]
+    msg = '🤖 【GitHub AI Trending】\n\n'
+    for repo in repos:
+        name = repo.select_one('h2 > a').text.strip().replace('\n', '').replace(' ', '')
+        desc = repo.select_one('p').text.strip() if repo.select_one('p') else 'No desc'
+        msg += f'• {name}\n  {desc}\n\n'
+    requests.post(os.environ['FEISHU_WEBHOOK'], json={'msg_type': 'text', 'content': {'text': msg}})
+except Exception as e:
+    print(e)
+"
+```
