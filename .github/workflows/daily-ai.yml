@@ -1,33 +1,18 @@
-
-```yaml
-name: Daily News
-on:
-  workflow_dispatch:
-  schedule:
-    - cron: '0 1 * * *'
-jobs:
-  run-it:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install Tools
-        run: pip install requests beautifulsoup4
-      - name: Fetch and Post
-        env:
-          FEISHU_WEBHOOK: ${{ secrets.FEISHU_WEBHOOK }}
-        run: |
-          python3 -c "import requests, os
-          from bs4 import BeautifulSoup
-          try:
-              res = requests.get('https://github.com/trending/ai')
-              soup = BeautifulSoup(res.text, 'html.parser')
-              repos = soup.select('article.Box-row')[:5]
-              msg = '🤖 【GitHub AI Trending】\n\n'
-              for r in repos:
-                  name = r.select_one('h2 > a').text.strip().replace('\n', '').replace(' ', '')
-                  desc = r.select_one('p').text.strip() if r.select_one('p') else 'No desc'
-                  msg += f'• {name}\n  {desc}\n\n'
-              requests.post(os.environ['FEISHU_WEBHOOK'], json={'msg_type': 'text', 'content': {'text': msg}})
-          except Exception as e:
-              print(e)"
-```
+                                                                                                                                                    
+```yaml                                                                                                                                             
+name: Daily                                                                                                                                         
+on:                                                                                                                                                 
+  workflow_dispatch:                                                                                                                                
+  schedule:                                                                                                                                         
+    - cron: '0 1 * * *'                                                                                                                             
+jobs:                                                                                                                                               
+  run-it:                                                                                                                                           
+    runs-on: ubuntu-latest                                                                                                                          
+    steps:                                                                                                                                          
+      - name: Runner                                                                                                                                
+        env:                                                                                                                                        
+          WH: ${{ secrets.FEISHU_WEBHOOK }}                                                                                                         
+        run: |                                                                                                                                      
+          pip install requests beautifulsoup4                                                                                                       
+          python3 -c "import requests,os; r=requests.get('https://github.com/trending/ai'); from bs4 import BeautifulSoup as B; soup=B(r.text,'html.parser'); repos=soup.select('article.Box-row')[:5]; msg='🤖 【GitHub AI Trending】\n\n'; [msg:=msg+'• '+r.select_one('h2>a').text.strip().replace('\n','').replace(' ','')+'\n  '+(r.select_one('p').text.strip() if r.select_one('p') else 'No desc')+'\n\n' for r in repos]; requests.post(os.environ['WH'], json={'msg_type':'text','content':{'text':msg}})"                                                                                            
+```           
