@@ -1,18 +1,17 @@
                                                                                                                                                     
 ```yaml                                                                                                                                             
-name: Daily                                                                                                                                         
+name: Test Feishu                                                                                                                                   
 on:                                                                                                                                                 
   workflow_dispatch:                                                                                                                                
-  schedule:                                                                                                                                         
-    - cron: '0 1 * * *'                                                                                                                             
 jobs:                                                                                                                                               
   run-it:                                                                                                                                           
     runs-on: ubuntu-latest                                                                                                                          
     steps:                                                                                                                                          
-      - name: Runner                                                                                                                                
+      - name: Send Test to Feishu                                                                                                                   
         env:                                                                                                                                        
           WH: ${{ secrets.FEISHU_WEBHOOK }}                                                                                                         
         run: |                                                                                                                                      
-          pip install requests beautifulsoup4                                                                                                       
-          python3 -c "import requests,os; r=requests.get('https://github.com/trending/ai'); from bs4 import BeautifulSoup as B; soup=B(r.text,'html.parser'); repos=soup.select('article.Box-row')[:5]; msg='🤖 【GitHub AI Trending】\n\n'; [msg:=msg+'• '+r.select_one('h2>a').text.strip().replace('\n','').replace(' ','')+'\n  '+(r.select_one('p').text.strip() if r.select_one('p') else 'No desc')+'\n\n' for r in repos]; requests.post(os.environ['WH'], json={'msg_type':'text','content':{'text':msg}})"                                                                                            
-```           
+          curl -H "Content-Type: application/json" \                                                                                                
+          -d '{"msg_type": "text", "content": {"text": "✅ GitHub 成功联通飞书！"}}' \                                                              
+          $WH                                                                                                                                       
+```                 
