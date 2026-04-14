@@ -2,7 +2,7 @@ name: Daily AI Trending
 
 on:
   schedule:
-    - cron: '0 1 * * *'  # 每天北京时间早上9点
+    - cron: '0 1 * * *'
   workflow_dispatch:
 
 jobs:
@@ -13,25 +13,34 @@ jobs:
         env:
           WH: ${{ secrets.FEISHU_WEBHOOK }}
         run: |
-          # 抓取 GitHub Trending 页面
-          HTML=$(curl -s "https://github.com/trending?since=daily&spoken_language_code=en" \
-            -H "User-Agent: Mozilla/5.0")
+          pip install requests beautifulsoup4 -q
           
-          # 提取项目信息
-          REPOS=$(echo "$HTML" | grep -oP '(?<=href="/)[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+(?=" )' | \
-            grep -iv "trending\|explore\|login\|signup" | head -20)
+          python3 << 'EOF'
+          import requests, json, os
+          from datetime import datetime
+          from bs4 import BeautifulSoup
           
-          # 构建消息
-          DATE=$(TZ='Asia/Shanghai' date '+%Y-%m-%d')
-          MSG="🔥 GitHub AI Trending - $DATE\n\n"
+          # 抓取 GitHub Trending
+          headers = {"User-Agent": "Mozilla/5.0"}
+          res = requests.get("https://github.com/trending?since=daily", headers=headers)
+          soup = BeautifulSoup(res.text, "html.parser")
           
-          COUNT=1
-          while IFS= read -r repo; do
-            MSG="${MSG}${COUNT}. https://github.com/${repo}\n"
-            COUNT=$((COUNT + 1))
-          done <<< "$REPOS"
+          repos = []
+          for item in soup.select("article.Box-row")[:15]:
+              name = item.select_one("h2 a")
+              desc = item.select_one("p")
+              stars = item.select_one("span.d-inline-block.float-sm-right")
+              if name:
+                  repo_name = name.get_text(strip=True).replace("\n","").replace(" ","")
+                  repo_desc = desc.get_text(strip=True) if desc else "暂无描述"
+                  repo_stars = stars.get_text(strip=True) if stars else ""
+                  repos.append(f"{repo_name} | {repo_stars}\n{repo_desc}")
           
-          # 发送到飞书
-          curl -s -X POST "$WH" \
-            -H "Content-Type: application/json" \
-            -d "{\"msg_type\": \"text\", \"content\": {\"text\": \"$(echo -e $MSG)\"}}"
+          date = datetime.now().strftime("%Y-%m-%d")
+          msg = f"GitHub Trending {date}\n\n" + "\n\n".join([f"{i+1}. {r}" for i,r in enumerate(repos)])
+          
+          webhook = os.environ["WH"]
+          payload = {"msg_type": "text", "content": {"text": msg}}
+          r = requests.post(webhook, json=payload)
+          print(r.text)
+          EOF
