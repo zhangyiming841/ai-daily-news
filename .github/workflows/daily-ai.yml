@@ -1,17 +1,14 @@
-                                                                                                                                                    
-```yaml                                                                                                                                             
-name: Test Feishu                                                                                                                                   
-on:                                                                                                                                                 
-  workflow_dispatch:                                                                                                                                
-jobs:                                                                                                                                               
-  run-it:                                                                                                                                           
-    runs-on: ubuntu-latest                                                                                                                          
-    steps:                                                                                                                                          
-      - name: Send Test to Feishu                                                                                                                   
-        env:                                                                                                                                        
-          WH: ${{ secrets.FEISHU_WEBHOOK }}                                                                                                         
-        run: |                                                                                                                                      
-          curl -H "Content-Type: application/json" \                                                                                                
-          -d '{"msg_type": "text", "content": {"text": "✅ GitHub 成功联通飞书！"}}' \                                                              
-          $WH                                                                                                                                       
-```                 
+name: Test Feishu
+on:
+  workflow_dispatch:
+jobs:
+  run-it:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Test to Feishu
+        env:
+          WH: ${{ secrets.FEISHU_WEBHOOK }}
+        run: |
+          curl -H "Content-Type: application/json" \
+          -d '{"msg_type": "text", "content": {"text": "✅ GitHub 成功联通飞书！"}}' \
+          $WH
